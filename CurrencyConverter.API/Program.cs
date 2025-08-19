@@ -48,12 +48,15 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
 
 // Register HTTP Client for Frankfurter API and Currency Provider
-builder.Services.AddHttpClient<FrankfurterApiService>(client =>
+// Register named HTTP Client for Frankfurter API
+builder.Services.AddHttpClient("Frankfurter", client =>
 {
     client.BaseAddress = new Uri("https://api.frankfurter.app/");
     client.Timeout = TimeSpan.FromSeconds(30);
     client.DefaultRequestHeaders.Add("User-Agent", "CurrencyConverter-API/1.0");
 });
+
+// Register FrankfurterApiService as an ICurrencyProvider
 builder.Services.AddScoped<ICurrencyProvider, FrankfurterApiService>();
 
 // Register Currency Provider Factory

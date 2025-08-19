@@ -11,24 +11,27 @@ namespace CurrencyConverter.Tests.Services
     public class FrankfurterApiServiceTests : IDisposable
     {
         private readonly MockHttpMessageHandler _mockHttpMessageHandler;
-        private readonly HttpClient _httpClient;
+        private readonly Mock<IHttpClientFactory> _mockHttpClientFactory;
         private readonly Mock<ILogger<FrankfurterApiService>> _mockLogger;
         private readonly FrankfurterApiService _service;
 
         public FrankfurterApiServiceTests()
         {
             _mockHttpMessageHandler = new MockHttpMessageHandler();
-            _httpClient = new HttpClient(_mockHttpMessageHandler)
+            var httpClient = new HttpClient(_mockHttpMessageHandler)
             {
                 BaseAddress = new Uri("https://api.frankfurter.app/")
             };
+
+            _mockHttpClientFactory = new Mock<IHttpClientFactory>();
+            _mockHttpClientFactory.Setup(f => f.CreateClient("Frankfurter")).Returns(httpClient);
+
             _mockLogger = new Mock<ILogger<FrankfurterApiService>>();
-            _service = new FrankfurterApiService(_httpClient, _mockLogger.Object);
+            _service = new FrankfurterApiService(_mockHttpClientFactory.Object, _mockLogger.Object);
         }
 
         public void Dispose()
         {
-            _httpClient.Dispose();
             _mockHttpMessageHandler.Dispose();
         }
 
@@ -60,7 +63,7 @@ namespace CurrencyConverter.Tests.Services
             Assert.NotNull(result);
             var exchangeRates = result.ToList();
             Assert.Equal(3, exchangeRates.Count);
-            
+
             var usdRate = exchangeRates.First(r => r.TargetCurrency == "USD");
             Assert.Equal("EUR", usdRate.BaseCurrency);
             Assert.Equal(1.0954m, usdRate.Rate);
@@ -82,7 +85,7 @@ namespace CurrencyConverter.Tests.Services
         {
             // Arrange
             var baseCurrency = "EUR";
-            
+
             _mockHttpMessageHandler
                 .When($"/latest?from={baseCurrency}")
                 .Throw(new HttpRequestException("Network error"));
@@ -106,7 +109,7 @@ namespace CurrencyConverter.Tests.Services
         {
             // Arrange
             var baseCurrency = "EUR";
-            
+
             _mockHttpMessageHandler
                 .When($"/latest?from={baseCurrency}")
                 .Respond(HttpStatusCode.InternalServerError);
@@ -166,7 +169,7 @@ namespace CurrencyConverter.Tests.Services
             var baseCurrency = "EUR";
             var fromDate = DateTime.UtcNow.AddDays(-7);
             var toDate = DateTime.UtcNow;
-            
+
             var responseContent = JsonSerializer.Serialize(new
             {
                 Base = "EUR",
@@ -211,7 +214,7 @@ namespace CurrencyConverter.Tests.Services
             var baseCurrency = "EUR";
             var fromDate = DateTime.UtcNow.AddDays(-7);
             var toDate = DateTime.UtcNow;
-            
+
             _mockHttpMessageHandler
                 .When($"/{fromDate:yyyy-MM-dd}..{toDate:yyyy-MM-dd}?from={baseCurrency}")
                 .Throw(new HttpRequestException("Network error"));
@@ -237,7 +240,7 @@ namespace CurrencyConverter.Tests.Services
             var baseCurrency = "EUR";
             var fromDate = DateTime.UtcNow.AddDays(-7);
             var toDate = DateTime.UtcNow;
-            
+
             var responseContent = JsonSerializer.Serialize(new
             {
                 Base = "EUR",
