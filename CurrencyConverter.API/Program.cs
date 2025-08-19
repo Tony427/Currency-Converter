@@ -15,6 +15,7 @@ using FluentValidation.AspNetCore;
 using CurrencyConverter.API.Logging;
 using CurrencyConverter.Application.Settings;
 using Microsoft.AspNetCore.RateLimiting;
+using NWebsec.AspNetCore.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,8 +23,8 @@ var builder = WebApplication.CreateBuilder(args);
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
-    .Enrich.With<CurrencyConverter.API.Logging.ClientIpEnricher>()
-    .Enrich.With<CurrencyConverter.API.Logging.UserIdEnricher>()
+    .Enrich.With<ClientIpEnricher>()
+    .Enrich.With<UserIdEnricher>()
     .WriteTo.Console()
     .WriteTo.File("logs/currency-converter-.log", rollingInterval: RollingInterval.Day)
     .CreateLogger();
@@ -42,6 +43,10 @@ builder.Services.AddMemoryCache();
 
 // Register HttpContextAccessor for log enrichers
 builder.Services.AddSingleton<Microsoft.AspNetCore.Http.IHttpContextAccessor, Microsoft.AspNetCore.Http.HttpContextAccessor>();
+
+// Register custom Serilog enrichers
+builder.Services.AddSingleton<ClientIpEnricher>();
+builder.Services.AddSingleton<UserIdEnricher>();
 
 // Register Caching Service
 builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
