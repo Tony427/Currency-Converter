@@ -477,4 +477,8 @@ CLAUDE.md
 # Exclude Spec.md from git tracking (as specified in CLAUDE.md)
 Spec.md
 
+# Exclude AI assistant directories
+.claude/
+.gemini/
+
 Objective.md
