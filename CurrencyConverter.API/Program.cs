@@ -16,6 +16,8 @@ using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using System.Text;
 using System.Threading.RateLimiting;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -46,7 +48,12 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
 
 // Register HTTP Client for Frankfurter API and Currency Provider
-builder.Services.AddHttpClient<FrankfurterApiService>();
+builder.Services.AddHttpClient<FrankfurterApiService>(client =>
+{
+    client.BaseAddress = new Uri("https://api.frankfurter.app/");
+    client.Timeout = TimeSpan.FromSeconds(30);
+    client.DefaultRequestHeaders.Add("User-Agent", "CurrencyConverter-API/1.0");
+});
 builder.Services.AddScoped<ICurrencyProvider, FrankfurterApiService>();
 
 // Register Currency Provider Factory
@@ -171,6 +178,51 @@ builder.Services.AddCors(options =>
             .AllowAnyHeader()
             .AllowAnyMethod());
 });
+
+// Configure OpenTelemetry Tracing
+builder.Services.AddOpenTelemetry()
+    .WithTracing(builder =>
+    {
+        builder
+            .SetResourceBuilder(ResourceBuilder.CreateDefault()
+                .AddService("CurrencyConverter.API", "1.0.0")
+                .AddAttributes(new Dictionary<string, object>
+                {
+                    ["service.namespace"] = "CurrencyConverter",
+                    ["service.instance.id"] = Environment.MachineName
+                }))
+            .AddAspNetCoreInstrumentation(options =>
+            {
+                options.RecordException = true;
+                options.Filter = (httpRequest) =>
+                {
+                    // Don't trace health check endpoints to reduce noise
+                    return !httpRequest.Request.Path.StartsWithSegments("/health");
+                };
+            })
+            .AddHttpClientInstrumentation(options =>
+            {
+                options.RecordException = true;
+                // Add custom tags for external API calls
+                options.EnrichWithHttpRequestMessage = (activity, httpRequestMessage) =>
+                {
+                    if (httpRequestMessage.RequestUri?.Host == "api.frankfurter.app")
+                    {
+                        activity.SetTag("external.api", "frankfurter");
+                        activity.SetTag("external.service", "exchange-rates");
+                    }
+                };
+                options.EnrichWithHttpResponseMessage = (activity, httpResponseMessage) =>
+                {
+                    activity.SetTag("http.response.status_text", httpResponseMessage.ReasonPhrase);
+                };
+            })
+            .AddSource("CurrencyConverter.Infrastructure.FrankfurterApi")
+            .AddConsoleExporter(options =>
+            {
+                options.Targets = OpenTelemetry.Exporter.ConsoleExporterOutputTargets.Console;
+            });
+    });
 
 var app = builder.Build();
 
