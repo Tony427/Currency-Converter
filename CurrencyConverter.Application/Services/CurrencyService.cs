@@ -125,10 +125,7 @@ namespace CurrencyConverter.Application.Services
                 throw new ArgumentException($"Currency {baseCurrency} is excluded.");
             }
 
-            if (fromDate > toDate)
-            {
-                throw new ArgumentException("From date cannot be after to date.");
-            }
+            
 
             var cacheKey = $"historical_rates_{baseCurrency.ToUpper()}_{fromDate:yyyyMMdd}_{toDate:yyyyMMdd}_{page}_{pageSize}";
             var rates = await _cacheService.GetOrCreateAsync(cacheKey, async () =>
