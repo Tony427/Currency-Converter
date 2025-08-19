@@ -476,3 +476,5 @@ CLAUDE.md
 
 # Exclude Spec.md from git tracking (as specified in CLAUDE.md)
 Spec.md
+
+Objective.md
