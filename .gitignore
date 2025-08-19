@@ -471,10 +471,11 @@ appsettings.Production.json
 ## Custom exclusions per CLAUDE.md requirements
 ##
 
-# Exclude CLAUDE.md from git tracking
 CLAUDE.md
+GEMINI.md
 
 # Exclude Spec.md from git tracking (as specified in CLAUDE.md)
 Spec.md
-
 Objective.md
+
+.claude/*.json
