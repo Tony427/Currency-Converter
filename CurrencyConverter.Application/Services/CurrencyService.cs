@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System;
 using System.Linq;
+using Microsoft.Extensions.Options;
+using CurrencyConverter.Application.Settings;
 
 namespace CurrencyConverter.Application.Services
 {
@@ -11,12 +13,13 @@ namespace CurrencyConverter.Application.Services
     {
         private readonly ICurrencyProviderFactory _currencyProviderFactory;
         private readonly ICacheService _cacheService;
-        private readonly HashSet<string> _excludedCurrencies = new HashSet<string> { "TRY", "PLN", "THB", "MXN" };
+        private readonly HashSet<string> _excludedCurrencies;
 
-        public CurrencyService(ICurrencyProviderFactory currencyProviderFactory, ICacheService cacheService)
+        public CurrencyService(ICurrencyProviderFactory currencyProviderFactory, ICacheService cacheService, IOptions<CurrencySettings> currencySettings)
         {
             _currencyProviderFactory = currencyProviderFactory;
             _cacheService = cacheService;
+            _excludedCurrencies = new HashSet<string>(currencySettings.Value.ExcludedCurrencies, StringComparer.OrdinalIgnoreCase);
         }
 
         public async Task<IEnumerable<ExchangeRate>> GetLatestExchangeRatesAsync(string baseCurrency)
