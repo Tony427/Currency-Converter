@@ -45,19 +45,9 @@ namespace CurrencyConverter.API.Controllers
         }
 
         [HttpGet("historical")]
-        public async Task<IActionResult> GetHistoricalRates(
-            [FromQuery] string baseCurrency,
-            [FromQuery] DateTime? fromDate,
-            [FromQuery] DateTime? toDate,
-            [FromQuery] int pageNumber = 1,
-            [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> GetHistoricalRates([FromQuery] HistoricalRatesRequestDto request)
         {
-            if (!fromDate.HasValue || !toDate.HasValue)
-            {
-                return BadRequest("Both 'from' and 'to' dates are required for historical rates.");
-            }
-
-            var rates = await _currencyService.GetHistoricalExchangeRatesAsync(baseCurrency, fromDate.Value, toDate.Value, pageNumber, pageSize);
+            var rates = await _currencyService.GetHistoricalExchangeRatesAsync(request.BaseCurrency, request.FromDate, request.ToDate, request.Page, request.PageSize);
             if (rates == null || !rates.Any())
             {
                 return NotFound("No historical rates found for the specified criteria.");
