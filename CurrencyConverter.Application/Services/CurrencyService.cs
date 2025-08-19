@@ -33,15 +33,15 @@ namespace CurrencyConverter.Application.Services
                 if (fetchedRates != null)
                 {
                     // Filter out excluded target currencies before caching and returning
-                    return fetchedRates.Where(r => !_excludedCurrencies.Contains(r.TargetCurrency.ToUpper())).ToList();
+                    return fetchedRates.Where(r => !_excludedCurrencies.Contains(r.TargetCurrency.ToUpper()));
                 }
-                return null;
+                return Enumerable.Empty<ExchangeRate>();
             }, TimeSpan.FromMinutes(15));
 
-            return rates;
+            return rates ?? Enumerable.Empty<ExchangeRate>();
         }
 
-        public async Task<ConversionResponseDto> ConvertCurrencyAsync(ConversionRequestDto request)
+        public async Task<ConversionResponseDto?> ConvertCurrencyAsync(ConversionRequestDto request)
         {
             if (_excludedCurrencies.Contains(request.FromCurrency.ToUpper()) || _excludedCurrencies.Contains(request.ToCurrency.ToUpper()))
             {
@@ -51,7 +51,7 @@ namespace CurrencyConverter.Application.Services
             // For simplicity, we'll fetch latest rates and calculate. In a real scenario,
             // you might fetch specific rates or use a more complex conversion logic.
             var latestRates = await GetLatestExchangeRatesAsync(request.FromCurrency);
-            if (latestRates == null)
+            if (latestRates == null || !latestRates.Any())
             {
                 return null; // Or throw a specific exception
             }
@@ -138,13 +138,12 @@ namespace CurrencyConverter.Application.Services
                     return fetchedRates
                         .Where(r => !_excludedCurrencies.Contains(r.TargetCurrency.ToUpper()))
                         .Skip((page - 1) * pageSize)
-                        .Take(pageSize)
-                        .ToList();
+                        .Take(pageSize);
                 }
-                return null;
+                return Enumerable.Empty<ExchangeRate>();
             }, TimeSpan.FromHours(24));
 
-            return rates;
+            return rates ?? Enumerable.Empty<ExchangeRate>();
         }
     }
 }

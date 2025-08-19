@@ -6,6 +6,8 @@ using Microsoft.Extensions.Logging;
 using CurrencyConverter.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
+using Microsoft.AspNetCore.Authentication;
+using CurrencyConverter.Domain.Interfaces;
 
 namespace CurrencyConverter.Tests.Integration
 {
@@ -14,14 +16,16 @@ namespace CurrencyConverter.Tests.Integration
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
+            builder.UseEnvironment("Testing");
+            
             builder.ConfigureServices(services =>
             {
                 // Remove the app's ApplicationDbContext registration.
-                var descriptor = services.SingleOrDefault(
-                    d => d.ServiceType ==
-                        typeof(DbContextOptions<ApplicationDbContext>));
-
-                if (descriptor != null)
+                var dbContextDescriptors = services.Where(
+                    d => d.ServiceType == typeof(DbContextOptions<ApplicationDbContext>) ||
+                         d.ServiceType == typeof(ApplicationDbContext)).ToList();
+                
+                foreach (var descriptor in dbContextDescriptors)
                 {
                     services.Remove(descriptor);
                 }
@@ -31,6 +35,21 @@ namespace CurrencyConverter.Tests.Integration
                 {
                     options.UseInMemoryDatabase("InMemoryDbForTesting");
                 });
+
+                // Add HttpContextAccessor for testing
+                services.AddHttpContextAccessor();
+
+                // Replace authentication with test authentication
+                services.AddAuthentication("Test")
+                    .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>("Test", options => { });
+
+                // Replace CurrencyProvider with mock for testing
+                var currencyProviderDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(ICurrencyProvider));
+                if (currencyProviderDescriptor != null)
+                {
+                    services.Remove(currencyProviderDescriptor);
+                }
+                services.AddScoped<ICurrencyProvider, MockCurrencyProvider>();
 
                 // Build the service provider.
                 var sp = services.BuildServiceProvider();

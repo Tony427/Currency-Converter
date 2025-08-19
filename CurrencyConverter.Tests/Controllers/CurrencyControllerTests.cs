@@ -76,7 +76,7 @@ namespace CurrencyConverter.Tests.Controllers
             // Arrange
             var request = new ConversionRequestDto { Amount = 100, FromCurrency = "USD", ToCurrency = "XYZ" };
             _mockCurrencyService.Setup(s => s.ConvertCurrencyAsync(request))
-                .ReturnsAsync((ConversionResponseDto)null);
+                .ReturnsAsync((ConversionResponseDto?)null);
 
             // Act
             var result = await _controller.ConvertCurrency(request);

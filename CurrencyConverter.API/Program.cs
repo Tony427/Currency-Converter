@@ -23,8 +23,6 @@ var builder = WebApplication.CreateBuilder(args);
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
-    .Enrich.With(new ClientIpEnricher(builder.Services.BuildServiceProvider().GetRequiredService<IHttpContextAccessor>()))
-    .Enrich.With(new UserIdEnricher(builder.Services.BuildServiceProvider().GetRequiredService<IHttpContextAccessor>()))
     .WriteTo.Console()
     .WriteTo.File("logs/currency-converter-.log", rollingInterval: RollingInterval.Day)
     .CreateLogger();
@@ -42,11 +40,7 @@ builder.Services.Configure<CurrencySettings>(builder.Configuration.GetSection("C
 builder.Services.AddMemoryCache();
 
 // Register HttpContextAccessor for log enrichers
-builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
-
-// Register custom Serilog enrichers
-builder.Services.AddSingleton<ClientIpEnricher>();
-builder.Services.AddSingleton<UserIdEnricher>();
+builder.Services.AddHttpContextAccessor();
 
 // Register Caching Service
 builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
@@ -61,68 +55,77 @@ builder.Services.AddScoped<ICurrencyProviderFactory, CurrencyProviderFactory>();
 // Register Currency Service
 builder.Services.AddScoped<ICurrencyService, CurrencyService>();
 
-// Configure Entity Framework with SQLite
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
-
-// Configure ASP.NET Identity
-builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
+// Configure Entity Framework with SQLite (skip if Testing environment)
+if (!builder.Environment.IsEnvironment("Testing"))
 {
-    // Password settings
-    options.Password.RequireDigit = true;
-    options.Password.RequireLowercase = true;
-    options.Password.RequireUppercase = true;
-    options.Password.RequireNonAlphanumeric = false;
-    options.Password.RequiredLength = 6;
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+        options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+}
 
-    // User settings
-    options.User.RequireUniqueEmail = true;
-    options.User.AllowedUserNameCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
-
-    // Signin settings
-    options.SignIn.RequireConfirmedEmail = false;
-    options.SignIn.RequireConfirmedAccount = false;
-})
-.AddEntityFrameworkStores<ApplicationDbContext>()
-.AddDefaultTokenProviders();
-
-// Configure JWT Authentication
-var jwtSettings = builder.Configuration.GetSection("JWT");
-builder.Services.AddAuthentication(options =>
+// Configure ASP.NET Identity (skip if Testing environment)
+if (!builder.Environment.IsEnvironment("Testing"))
 {
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = new TokenValidationParameters
+    builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
     {
-        ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Secret"]!)),
-        ValidateIssuer = true,
-        ValidIssuer = jwtSettings["Issuer"],
-        ValidateAudience = true,
-        ValidAudience = jwtSettings["Audience"],
-        ValidateLifetime = true,
-        ClockSkew = TimeSpan.Zero
-    };
+        // Password settings
+        options.Password.RequireDigit = true;
+        options.Password.RequireLowercase = true;
+        options.Password.RequireUppercase = true;
+        options.Password.RequireNonAlphanumeric = false;
+        options.Password.RequiredLength = 6;
 
-    // Log JWT authentication events
-    options.Events = new JwtBearerEvents
+        // User settings
+        options.User.RequireUniqueEmail = true;
+        options.User.AllowedUserNameCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
+
+        // Signin settings
+        options.SignIn.RequireConfirmedEmail = false;
+        options.SignIn.RequireConfirmedAccount = false;
+    })
+    .AddEntityFrameworkStores<ApplicationDbContext>()
+    .AddDefaultTokenProviders();
+}
+
+// Configure JWT Authentication (skip if Testing environment)
+if (!builder.Environment.IsEnvironment("Testing"))
+{
+    var jwtSettings = builder.Configuration.GetSection("JWT");
+    builder.Services.AddAuthentication(options =>
     {
-        OnAuthenticationFailed = context =>
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
         {
-            Log.Warning("JWT Authentication failed: {Error}", context.Exception.Message);
-            return Task.CompletedTask;
-        },
-        OnTokenValidated = context =>
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Secret"]!)),
+            ValidateIssuer = true,
+            ValidIssuer = jwtSettings["Issuer"],
+            ValidateAudience = true,
+            ValidAudience = jwtSettings["Audience"],
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero
+        };
+
+        // Log JWT authentication events
+        options.Events = new JwtBearerEvents
         {
-            Log.Information("JWT Token validated for user: {UserId}",
-                context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value);
-            return Task.CompletedTask;
-        }
-    };
-});
+            OnAuthenticationFailed = context =>
+            {
+                Log.Warning("JWT Authentication failed: {Error}", context.Exception.Message);
+                return Task.CompletedTask;
+            },
+            OnTokenValidated = context =>
+            {
+                Log.Information("JWT Token validated for user: {UserId}",
+                    context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value);
+                return Task.CompletedTask;
+            }
+        };
+    });
+}
 
 // Register JWT Token Service
 builder.Services.AddScoped<IJwtTokenService, CurrencyConverter.Application.Services.JwtTokenService>();
@@ -181,16 +184,19 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-// Ensure database is created and seed initial data
-using (var scope = app.Services.CreateScope())
+// Ensure database is created and seed initial data (skip if Testing environment)
+if (!app.Environment.IsEnvironment("Testing"))
 {
-    var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
+    using (var scope = app.Services.CreateScope())
+    {
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
 
-    context.Database.EnsureCreated();
+        context.Database.EnsureCreated();
 
-    // Create default roles
-    await SeedRolesAsync(roleManager);
+        // Create default roles
+        await SeedRolesAsync(roleManager);
+    }
 }
 
 app.UseSerilogRequestLogging();
