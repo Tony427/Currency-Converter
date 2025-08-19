@@ -8,6 +8,8 @@ using Asp.Versioning;
 using CurrencyConverter.Infrastructure.Data;
 using CurrencyConverter.Domain.Entities;
 using CurrencyConverter.Application.Services;
+using CurrencyConverter.Domain.Interfaces;
+using FluentValidation.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,7 +23,24 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 // Add services to the container.
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddFluentValidation(fv => fv.RegisterValidatorsFromAssemblyContaining<CurrencyConverter.Application.Validators.ConversionRequestDtoValidator>());
+
+// Add Memory Cache
+builder.Services.AddMemoryCache();
+
+// Register Caching Service
+builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
+
+// Register HTTP Client for Frankfurter API and Currency Provider
+builder.Services.AddHttpClient<CurrencyConverter.Infrastructure.Services.FrankfurterApiService>();
+builder.Services.AddScoped<CurrencyConverter.Domain.Interfaces.ICurrencyProvider, CurrencyConverter.Infrastructure.Services.FrankfurterApiService>();
+
+// Register Currency Provider Factory
+builder.Services.AddScoped<CurrencyConverter.Application.Services.ICurrencyProviderFactory, CurrencyConverter.Application.Services.CurrencyProviderFactory>();
+
+// Register Currency Service
+builder.Services.AddScoped<CurrencyConverter.Application.Services.ICurrencyService, CurrencyConverter.Application.Services.CurrencyService>();
 
 // Configure Entity Framework with SQLite
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -136,6 +155,8 @@ using (var scope = app.Services.CreateScope())
 app.UseSerilogRequestLogging();
 
 app.UseHttpsRedirection();
+
+app.UseMiddleware<CurrencyConverter.API.Middleware.ExceptionHandlingMiddleware>();
 
 // Authentication must come before Authorization
 app.UseAuthentication();

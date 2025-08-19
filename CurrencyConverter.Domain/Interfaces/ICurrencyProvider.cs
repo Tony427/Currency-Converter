@@ -1,8 +1,9 @@
 using CurrencyConverter.Domain.Entities;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System;
 
-namespace CurrencyConverter.Application.Services
+namespace CurrencyConverter.Domain.Interfaces
 {
     public interface ICurrencyProvider
     {
