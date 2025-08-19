@@ -10,12 +10,16 @@ using CurrencyConverter.Domain.Entities;
 using CurrencyConverter.Application.Services;
 using CurrencyConverter.Domain.Interfaces;
 using FluentValidation.AspNetCore;
+using CurrencyConverter.API.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Configure Serilog
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
+    .Enrich.FromLogContext()
+    .Enrich.With<CurrencyConverter.API.Logging.ClientIpEnricher>()
+    .Enrich.With<CurrencyConverter.API.Logging.UserIdEnricher>()
     .WriteTo.Console()
     .WriteTo.File("logs/currency-converter-.log", rollingInterval: RollingInterval.Day)
     .CreateLogger();
@@ -31,6 +35,9 @@ builder.Services.Configure<CurrencySettings>(builder.Configuration.GetSection("C
 
 // Add Memory Cache
 builder.Services.AddMemoryCache();
+
+// Register HttpContextAccessor for log enrichers
+builder.Services.AddSingleton<Microsoft.AspNetCore.Http.IHttpContextAccessor, Microsoft.AspNetCore.Http.HttpContextAccessor>();
 
 // Register Caching Service
 builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
