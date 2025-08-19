@@ -26,6 +26,9 @@ builder.Host.UseSerilog();
 builder.Services.AddControllers()
     .AddFluentValidation(fv => fv.RegisterValidatorsFromAssemblyContaining<CurrencyConverter.Application.Validators.ConversionRequestDtoValidator>());
 
+// Configure Currency Settings
+builder.Services.Configure<CurrencySettings>(builder.Configuration.GetSection("CurrencySettings"));
+
 // Add Memory Cache
 builder.Services.AddMemoryCache();
 
