@@ -192,7 +192,8 @@ if (!app.Environment.IsEnvironment("Testing"))
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
 
-        context.Database.EnsureCreated();
+        // Apply migrations or create database
+        await ApplyDatabaseMigrationsAsync(context, app.Environment);
 
         // Create default roles
         await SeedRolesAsync(roleManager);
@@ -234,6 +235,56 @@ catch (Exception ex)
 finally
 {
     Log.CloseAndFlush();
+}
+
+// Method to apply database migrations
+static async Task ApplyDatabaseMigrationsAsync(ApplicationDbContext context, IWebHostEnvironment environment)
+{
+    try
+    {
+        // In Docker/Production environments, ensure data directory exists
+        if (environment.IsProduction() || environment.IsEnvironment("Docker"))
+        {
+            var connectionString = context.Database.GetConnectionString();
+            if (!string.IsNullOrEmpty(connectionString) && connectionString.Contains("/app/data/"))
+            {
+                var dataDirectory = Path.GetDirectoryName(connectionString.Replace("Data Source=", ""));
+                if (!string.IsNullOrEmpty(dataDirectory) && !Directory.Exists(dataDirectory))
+                {
+                    Directory.CreateDirectory(dataDirectory);
+                    Log.Information("Created data directory: {DataDirectory}", dataDirectory);
+                }
+            }
+        }
+
+        // Check if database exists
+        var canConnect = await context.Database.CanConnectAsync();
+        
+        if (!canConnect)
+        {
+            Log.Information("Database does not exist, creating database...");
+            await context.Database.EnsureCreatedAsync();
+            Log.Information("Database created successfully");
+        }
+        else
+        {
+            Log.Information("Database connection established");
+        }
+
+        // Apply pending migrations if any (for future use with EF migrations)
+        var pendingMigrations = await context.Database.GetPendingMigrationsAsync();
+        if (pendingMigrations.Any())
+        {
+            Log.Information("Applying {Count} pending migrations", pendingMigrations.Count());
+            await context.Database.MigrateAsync();
+            Log.Information("Migrations applied successfully");
+        }
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Error occurred while applying database migrations");
+        throw;
+    }
 }
 
 // Method to seed default roles
