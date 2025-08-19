@@ -1,0 +1,54 @@
+# Dockerfile and .dockerignore
+Dockerfile*
+.dockerignore
+
+# Git files
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+*.MD
+README*
+
+# Binary and build directories
+**/bin/
+**/obj/
+**/out/
+
+# Test results
+**/TestResults/
+CoverageReport/
+
+# Database files (will be created in container)
+Data/
+*.db
+*.db-shm
+*.db-wal
+
+# Logs
+logs/
+*.log
+
+# Environment files
+.env
+.env.*
+
+# Visual Studio files
+.vs/
+*.user
+*.suo
+*.sln.docstates
+.vscode/
+
+# JetBrains Rider
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+**/tmp/
+**/temp/

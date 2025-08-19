@@ -1,0 +1,35 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: currency-converter-api
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Docker
+      - ASPNETCORE_URLS=http://+:8080
+      - JWT__SECRET=${JWT_SECRET:-YourSuperSecretKeyThatShouldBeAtLeast32CharactersLong!2024}
+      - JWT__ISSUER=${JWT_ISSUER:-CurrencyConverterAPI}
+      - JWT__AUDIENCE=${JWT_AUDIENCE:-CurrencyConverterAPI}
+      - FRANKFURTER__BASEURL=${FRANKFURTER_BASEURL:-https://api.frankfurter.app}
+    volumes:
+      - currency_data:/app/data
+    networks:
+      - currency_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/api/v1/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    depends_on: []
+
+volumes:
+  currency_data:
+    driver: local
+
+networks:
+  currency_network:
+    driver: bridge
