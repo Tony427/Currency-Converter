@@ -53,10 +53,10 @@ builder.Services.AddHttpClient<CurrencyConverter.Infrastructure.Services.Frankfu
 builder.Services.AddScoped<CurrencyConverter.Domain.Interfaces.ICurrencyProvider, CurrencyConverter.Infrastructure.Services.FrankfurterApiService>();
 
 // Register Currency Provider Factory
-builder.Services.AddScoped<CurrencyConverter.Application.Services.ICurrencyProviderFactory, CurrencyConverter.Application.Services.CurrencyProviderFactory>();
+builder.Services.AddScoped<ICurrencyProviderFactory, CurrencyConverter.Application.Services.CurrencyProviderFactory>();
 
 // Register Currency Service
-builder.Services.AddScoped<CurrencyConverter.Application.Services.ICurrencyService, CurrencyConverter.Application.Services.CurrencyService>();
+builder.Services.AddScoped<ICurrencyService, CurrencyConverter.Application.Services.CurrencyService>();
 
 // Configure Entity Framework with SQLite
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -255,3 +255,4 @@ static async Task SeedRolesAsync(RoleManager<ApplicationRole> roleManager)
         }
     }
 }
+public partial class Program { }
