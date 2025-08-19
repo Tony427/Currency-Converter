@@ -2,9 +2,9 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using CurrencyConverter.API.DTOs;
-using CurrencyConverter.API.Models;
-using CurrencyConverter.API.Services;
+using CurrencyConverter.Application.DTOs.Auth;
+using CurrencyConverter.Domain.Entities;
+using CurrencyConverter.Application.Services;
 
 namespace CurrencyConverter.API.Controllers;
 

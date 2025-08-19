@@ -5,9 +5,9 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Serilog;
 using Asp.Versioning;
-using CurrencyConverter.API.Data;
-using CurrencyConverter.API.Models;
-using CurrencyConverter.API.Services;
+using CurrencyConverter.Infrastructure.Data;
+using CurrencyConverter.Domain.Entities;
+using CurrencyConverter.Application.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -87,7 +87,7 @@ builder.Services.AddAuthentication(options =>
 });
 
 // Register JWT Token Service
-builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
+builder.Services.AddScoped<IJwtTokenService, CurrencyConverter.Application.Services.JwtTokenService>();
 
 // Configure API Versioning
 builder.Services.AddApiVersioning(opt =>
