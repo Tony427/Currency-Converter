@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Threading.RateLimiting;
 using Serilog;
 using Asp.Versioning;
 using CurrencyConverter.Infrastructure.Data;
@@ -11,6 +13,8 @@ using CurrencyConverter.Application.Services;
 using CurrencyConverter.Domain.Interfaces;
 using FluentValidation.AspNetCore;
 using CurrencyConverter.API.Logging;
+using CurrencyConverter.Application.Settings;
+using Microsoft.AspNetCore.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -108,7 +112,7 @@ builder.Services.AddAuthentication(options =>
         },
         OnTokenValidated = context =>
         {
-            Log.Information("JWT Token validated for user: {UserId}", 
+            Log.Information("JWT Token validated for user: {UserId}",
                 context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value);
             return Task.CompletedTask;
         }
@@ -135,6 +139,19 @@ builder.Services.AddApiVersioning(opt =>
     setup.SubstituteApiVersionInUrl = true;
 });
 
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddFixedWindowLimiter("fixed-window", opt =>
+    {
+        opt.PermitLimit = 100;
+        opt.Window = TimeSpan.FromSeconds(10);
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        opt.QueueLimit = 5;
+    });
+});
+
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
@@ -155,9 +172,9 @@ using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
-    
+
     context.Database.EnsureCreated();
-    
+
     // Create default roles
     await SeedRolesAsync(roleManager);
 }
@@ -171,6 +188,8 @@ app.UseMiddleware<CurrencyConverter.API.Middleware.ExceptionHandlingMiddleware>(
 // Authentication must come before Authorization
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseRateLimiter();
 
 app.MapControllers();
 
@@ -192,17 +211,17 @@ finally
 static async Task SeedRolesAsync(RoleManager<ApplicationRole> roleManager)
 {
     var roles = new[] { "User", "Admin" };
-    
+
     foreach (var roleName in roles)
     {
         if (!await roleManager.RoleExistsAsync(roleName))
         {
-            var role = new ApplicationRole 
-            { 
+            var role = new ApplicationRole
+            {
                 Name = roleName,
                 Description = roleName == "Admin" ? "Administrator with full access" : "Regular user with basic access"
             };
-            
+
             var result = await roleManager.CreateAsync(role);
             if (result.Succeeded)
             {
@@ -210,7 +229,7 @@ static async Task SeedRolesAsync(RoleManager<ApplicationRole> roleManager)
             }
             else
             {
-                Log.Error("Failed to create role {RoleName}: {Errors}", roleName, 
+                Log.Error("Failed to create role {RoleName}: {Errors}", roleName,
                     string.Join(", ", result.Errors.Select(e => e.Description)));
             }
         }
