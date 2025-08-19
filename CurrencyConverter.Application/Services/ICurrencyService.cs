@@ -1,7 +1,5 @@
 using CurrencyConverter.Application.DTOs.Currency;
 using CurrencyConverter.Domain.Entities;
-using System.Threading.Tasks;
-using System.Collections.Generic;
 
 namespace CurrencyConverter.Application.Services
 {

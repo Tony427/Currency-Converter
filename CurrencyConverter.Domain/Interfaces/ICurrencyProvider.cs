@@ -1,7 +1,4 @@
 using CurrencyConverter.Domain.Entities;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using System;
 
 namespace CurrencyConverter.Domain.Interfaces
 {

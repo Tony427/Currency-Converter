@@ -1,6 +1,5 @@
-using FluentValidation;
 using CurrencyConverter.Application.DTOs.Currency;
-using System;
+using FluentValidation;
 
 namespace CurrencyConverter.Application.Validators
 {

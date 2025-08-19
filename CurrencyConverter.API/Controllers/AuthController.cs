@@ -1,10 +1,10 @@
 using Asp.Versioning;
+using CurrencyConverter.Application.DTOs.Auth;
+using CurrencyConverter.Application.Services;
+using CurrencyConverter.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using CurrencyConverter.Application.DTOs.Auth;
-using CurrencyConverter.Domain.Entities;
-using CurrencyConverter.Application.Services;
 
 namespace CurrencyConverter.API.Controllers;
 
@@ -108,7 +108,7 @@ public class AuthController : ControllerBase
         }
 
         var result = await _signInManager.CheckPasswordSignInAsync(user, request.Password, false);
-        
+
         if (!result.Succeeded)
         {
             _logger.LogWarning("Failed login attempt for email: {Email}", request.Email);

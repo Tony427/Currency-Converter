@@ -1,21 +1,18 @@
-using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
+using Asp.Versioning;
+using CurrencyConverter.API.Logging;
+using CurrencyConverter.Application.Services;
+using CurrencyConverter.Application.Settings;
+using CurrencyConverter.Domain.Entities;
+using CurrencyConverter.Infrastructure.Data;
+using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Serilog;
 using System.Text;
 using System.Threading.RateLimiting;
-using Serilog;
-using Asp.Versioning;
-using CurrencyConverter.Infrastructure.Data;
-using CurrencyConverter.Domain.Entities;
-using CurrencyConverter.Application.Services;
-using CurrencyConverter.Domain.Interfaces;
-using FluentValidation.AspNetCore;
-using CurrencyConverter.API.Logging;
-using CurrencyConverter.Application.Settings;
-using Microsoft.AspNetCore.RateLimiting;
-using NWebsec.AspNetCore.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 

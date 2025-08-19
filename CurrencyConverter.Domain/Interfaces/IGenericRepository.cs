@@ -1,6 +1,3 @@
-using System.Collections.Generic;
-using System.Threading.Tasks;
-
 namespace CurrencyConverter.Domain.Interfaces
 {
     public interface IGenericRepository<T>

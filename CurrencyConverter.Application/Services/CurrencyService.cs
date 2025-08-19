@@ -1,11 +1,7 @@
 using CurrencyConverter.Application.DTOs.Currency;
-using CurrencyConverter.Domain.Entities;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using System;
-using System.Linq;
-using Microsoft.Extensions.Options;
 using CurrencyConverter.Application.Settings;
+using CurrencyConverter.Domain.Entities;
+using Microsoft.Extensions.Options;
 
 namespace CurrencyConverter.Application.Services
 {
@@ -52,7 +48,7 @@ namespace CurrencyConverter.Application.Services
                 throw new ArgumentException("One of the currencies is excluded.");
             }
 
-            // For simplicity, we'll fetch latest rates and calculate. In a real scenario, 
+            // For simplicity, we'll fetch latest rates and calculate. In a real scenario,
             // you might fetch specific rates or use a more complex conversion logic.
             var latestRates = await GetLatestExchangeRatesAsync(request.FromCurrency);
             if (latestRates == null)
@@ -99,10 +95,10 @@ namespace CurrencyConverter.Application.Services
                             return new ConversionResponseDto
                             {
                                 FromCurrency = request.FromCurrency,
-                            ToCurrency = request.ToCurrency,
-                            ConvertedAmount = convertedAmount,
-                            Rate = (eurToTargetRate.Rate / fromEurRate.Rate),
-                            Date = DateTime.UtcNow
+                                ToCurrency = request.ToCurrency,
+                                ConvertedAmount = convertedAmount,
+                                Rate = (eurToTargetRate.Rate / fromEurRate.Rate),
+                                Date = DateTime.UtcNow
                             };
                         }
                     }
@@ -128,7 +124,7 @@ namespace CurrencyConverter.Application.Services
                 throw new ArgumentException($"Currency {baseCurrency} is excluded.");
             }
 
-            
+
 
             var cacheKey = $"historical_rates_{baseCurrency.ToUpper()}_{fromDate:yyyyMMdd}_{toDate:yyyyMMdd}_{page}_{pageSize}";
             var rates = await _cacheService.GetOrCreateAsync(cacheKey, async () =>
