@@ -1,13 +1,9 @@
-using Xunit;
-using Moq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
 using CurrencyConverter.API.Controllers;
-using CurrencyConverter.Application.Services;
 using CurrencyConverter.Application.DTOs.Currency;
-using System.Collections.Generic;
+using CurrencyConverter.Application.Services;
 using CurrencyConverter.Domain.Entities;
-using System.Linq;
+using Microsoft.AspNetCore.Mvc;
+using Moq;
 
 namespace CurrencyConverter.Tests.Controllers
 {

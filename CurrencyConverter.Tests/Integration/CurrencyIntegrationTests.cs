@@ -1,15 +1,8 @@
-using Xunit;
-using System.Net.Http;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc.Testing;
-using CurrencyConverter.API;
-using System.Net;
-using Newtonsoft.Json;
 using CurrencyConverter.Application.DTOs.Currency;
-using System.Text;
-using System.Collections.Generic;
 using CurrencyConverter.Domain.Entities;
-using System.Linq;
+using Newtonsoft.Json;
+using System.Net;
+using System.Text;
 
 namespace CurrencyConverter.Tests.Integration
 {

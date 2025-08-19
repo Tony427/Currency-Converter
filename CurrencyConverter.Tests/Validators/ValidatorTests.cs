@@ -1,8 +1,6 @@
-using Xunit;
-using FluentValidation.TestHelper;
 using CurrencyConverter.Application.DTOs.Currency;
 using CurrencyConverter.Application.Validators;
-using System;
+using FluentValidation.TestHelper;
 
 namespace CurrencyConverter.Tests.Validators
 {

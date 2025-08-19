@@ -2,8 +2,11 @@ using Asp.Versioning;
 using CurrencyConverter.API.Logging;
 using CurrencyConverter.Application.Services;
 using CurrencyConverter.Application.Settings;
+using CurrencyConverter.Application.Validators;
 using CurrencyConverter.Domain.Entities;
+using CurrencyConverter.Domain.Interfaces;
 using CurrencyConverter.Infrastructure.Data;
+using CurrencyConverter.Infrastructure.Services;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -30,7 +33,7 @@ builder.Host.UseSerilog();
 
 // Add services to the container.
 builder.Services.AddControllers()
-    .AddFluentValidation(fv => fv.RegisterValidatorsFromAssemblyContaining<CurrencyConverter.Application.Validators.ConversionRequestDtoValidator>());
+    .AddFluentValidation(fv => fv.RegisterValidatorsFromAssemblyContaining<ConversionRequestDtoValidator>());
 
 // Configure Currency Settings
 builder.Services.Configure<CurrencySettings>(builder.Configuration.GetSection("CurrencySettings"));
@@ -39,7 +42,7 @@ builder.Services.Configure<CurrencySettings>(builder.Configuration.GetSection("C
 builder.Services.AddMemoryCache();
 
 // Register HttpContextAccessor for log enrichers
-builder.Services.AddSingleton<Microsoft.AspNetCore.Http.IHttpContextAccessor, Microsoft.AspNetCore.Http.HttpContextAccessor>();
+builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
 // Register custom Serilog enrichers
 builder.Services.AddSingleton<ClientIpEnricher>();
@@ -49,14 +52,14 @@ builder.Services.AddSingleton<UserIdEnricher>();
 builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
 
 // Register HTTP Client for Frankfurter API and Currency Provider
-builder.Services.AddHttpClient<CurrencyConverter.Infrastructure.Services.FrankfurterApiService>();
-builder.Services.AddScoped<CurrencyConverter.Domain.Interfaces.ICurrencyProvider, CurrencyConverter.Infrastructure.Services.FrankfurterApiService>();
+builder.Services.AddHttpClient<FrankfurterApiService>();
+builder.Services.AddScoped<ICurrencyProvider, FrankfurterApiService>();
 
 // Register Currency Provider Factory
-builder.Services.AddScoped<ICurrencyProviderFactory, CurrencyConverter.Application.Services.CurrencyProviderFactory>();
+builder.Services.AddScoped<ICurrencyProviderFactory, CurrencyProviderFactory>();
 
 // Register Currency Service
-builder.Services.AddScoped<ICurrencyService, CurrencyConverter.Application.Services.CurrencyService>();
+builder.Services.AddScoped<ICurrencyService, CurrencyService>();
 
 // Configure Entity Framework with SQLite
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -255,4 +258,5 @@ static async Task SeedRolesAsync(RoleManager<ApplicationRole> roleManager)
         }
     }
 }
+
 public partial class Program { }

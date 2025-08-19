@@ -1,15 +1,10 @@
-using Xunit;
-using Moq;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+using CurrencyConverter.Application.DTOs.Currency;
 using CurrencyConverter.Application.Services;
+using CurrencyConverter.Application.Settings;
 using CurrencyConverter.Domain.Entities;
 using CurrencyConverter.Domain.Interfaces;
-using CurrencyConverter.Application.DTOs.Currency;
 using Microsoft.Extensions.Options;
-using CurrencyConverter.Application.Settings;
-using System.Linq;
+using Moq;
 
 namespace CurrencyConverter.Tests.Services
 {
