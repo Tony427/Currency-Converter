@@ -23,8 +23,8 @@ var builder = WebApplication.CreateBuilder(args);
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
-    .Enrich.With<ClientIpEnricher>()
-    .Enrich.With<UserIdEnricher>()
+    .Enrich.With(new ClientIpEnricher(builder.Services.BuildServiceProvider().GetRequiredService<IHttpContextAccessor>()))
+    .Enrich.With(new UserIdEnricher(builder.Services.BuildServiceProvider().GetRequiredService<IHttpContextAccessor>()))
     .WriteTo.Console()
     .WriteTo.File("logs/currency-converter-.log", rollingInterval: RollingInterval.Day)
     .CreateLogger();
