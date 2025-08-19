@@ -467,15 +467,12 @@ appsettings.Development.json
 appsettings.Staging.json
 appsettings.Production.json
 
-##
-## Custom exclusions per CLAUDE.md requirements
-##
-
+# Exclude AI assistant files from git tracking
 CLAUDE.md
 GEMINI.md
+.claude/
+.gemini/
 
 # Exclude Spec.md from git tracking (as specified in CLAUDE.md)
 Spec.md
 Objective.md
-
-.claude/*.json
