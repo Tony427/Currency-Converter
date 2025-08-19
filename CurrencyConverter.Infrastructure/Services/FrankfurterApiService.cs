@@ -1,4 +1,4 @@
-using CurrencyConverter.Application.Services;
+using CurrencyConverter.Domain.Interfaces;
 using CurrencyConverter.Domain.Entities;
 using System.Collections.Generic;
 using System.Net.Http;
