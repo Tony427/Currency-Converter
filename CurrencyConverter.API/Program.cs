@@ -1,5 +1,4 @@
 using Asp.Versioning;
-using CurrencyConverter.API.Logging;
 using CurrencyConverter.Application.Services;
 using CurrencyConverter.Application.Settings;
 using CurrencyConverter.Application.Validators;
@@ -13,11 +12,12 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Serilog;
 using System.Text;
 using System.Threading.RateLimiting;
-using OpenTelemetry.Resources;
-using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -48,12 +48,15 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
 
 // Register HTTP Client for Frankfurter API and Currency Provider
-builder.Services.AddHttpClient<FrankfurterApiService>(client =>
+// Register named HTTP Client for Frankfurter API
+builder.Services.AddHttpClient("Frankfurter", client =>
 {
     client.BaseAddress = new Uri("https://api.frankfurter.app/");
     client.Timeout = TimeSpan.FromSeconds(30);
     client.DefaultRequestHeaders.Add("User-Agent", "CurrencyConverter-API/1.0");
 });
+
+// Register FrankfurterApiService as an ICurrencyProvider
 builder.Services.AddScoped<ICurrencyProvider, FrankfurterApiService>();
 
 // Register Currency Provider Factory
@@ -168,13 +171,39 @@ builder.Services.AddRateLimiter(options =>
 });
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+builder.Services.AddSwaggerGen(option =>
+{
+    option.SwaggerDoc("v1", new OpenApiInfo { Title = "Currency Converter API", Version = "v1" });
+    option.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        In = ParameterLocation.Header,
+        Description = "Please enter a valid token",
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        BearerFormat = "JWT",
+        Scheme = "Bearer"
+    });
+    option.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new List<string>()
+        }
+    });
+});
 
 // Configure CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowSpecificOrigin",
-        builder => builder.WithOrigins("http://localhost:3000") // Replace with your frontend URL
+        builder => builder.WithOrigins("http://localhost:5000", "https://localhost:5001") // Replace with your frontend URL
             .AllowAnyHeader()
             .AllowAnyMethod());
 });
@@ -229,10 +258,10 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
-        c.SwaggerEndpoint("/openapi/v1.json", "Currency Converter API v1");
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Currency Converter API v1");
     });
 }
 
@@ -311,7 +340,7 @@ static async Task ApplyDatabaseMigrationsAsync(ApplicationDbContext context, IWe
 
         // Check if database exists
         var canConnect = await context.Database.CanConnectAsync();
-        
+
         if (!canConnect)
         {
             Log.Information("Database does not exist, creating database...");
