@@ -1,14 +1,8 @@
-using CurrencyConverter.Domain.Interfaces;
 using CurrencyConverter.Domain.Entities;
-using System.Collections.Generic;
-using System.Net.Http;
-using System.Text.Json;
-using System.Threading.Tasks;
-using System;
-using Polly;
-using Polly.Extensions.Http;
+using CurrencyConverter.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
+using System.Text.Json;
 
 namespace CurrencyConverter.Infrastructure.Services
 {

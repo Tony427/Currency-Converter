@@ -1,6 +1,5 @@
 using Serilog.Core;
 using Serilog.Events;
-using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 
 namespace CurrencyConverter.API.Logging

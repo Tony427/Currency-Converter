@@ -1,12 +1,12 @@
+using CurrencyConverter.Domain.Entities;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using CurrencyConverter.Domain.Entities;
 
 namespace CurrencyConverter.Application.Services;
 
@@ -17,7 +17,7 @@ public class JwtTokenService : IJwtTokenService
     private readonly ILogger<JwtTokenService> _logger;
 
     public JwtTokenService(
-        IConfiguration configuration, 
+        IConfiguration configuration,
         UserManager<ApplicationUser> userManager,
         ILogger<JwtTokenService> logger)
     {
@@ -44,7 +44,7 @@ public class JwtTokenService : IJwtTokenService
         // Add user's first and last name if available
         if (!string.IsNullOrEmpty(user.FirstName))
             claims.Add(new Claim(ClaimTypes.GivenName, user.FirstName));
-            
+
         if (!string.IsNullOrEmpty(user.LastName))
             claims.Add(new Claim(ClaimTypes.Surname, user.LastName));
 
@@ -61,7 +61,7 @@ public class JwtTokenService : IJwtTokenService
             Issuer = _configuration["JWT:Issuer"],
             Audience = _configuration["JWT:Audience"],
             SigningCredentials = new SigningCredentials(
-                new SymmetricSecurityKey(key), 
+                new SymmetricSecurityKey(key),
                 SecurityAlgorithms.HmacSha256Signature)
         };
 

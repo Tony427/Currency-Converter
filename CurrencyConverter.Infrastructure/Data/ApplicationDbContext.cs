@@ -1,6 +1,6 @@
+using CurrencyConverter.Domain.Entities;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using CurrencyConverter.Domain.Entities;
 
 namespace CurrencyConverter.Infrastructure.Data;
 
@@ -13,7 +13,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        
+
         // Configure ApplicationUser
         modelBuilder.Entity<ApplicationUser>(entity =>
         {

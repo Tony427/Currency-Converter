@@ -1,11 +1,8 @@
-using Microsoft.AspNetCore.Mvc;
+using Asp.Versioning;
 using CurrencyConverter.Application.DTOs.Currency;
 using CurrencyConverter.Application.Services;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
-using CurrencyConverter.Domain.Entities;
-using System.Collections.Generic;
-using Asp.Versioning;
+using Microsoft.AspNetCore.Mvc;
 
 namespace CurrencyConverter.API.Controllers
 {

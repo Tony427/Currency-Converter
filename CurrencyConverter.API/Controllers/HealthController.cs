@@ -26,7 +26,7 @@ public class HealthController : ControllerBase
     public ActionResult<object> GetHealth()
     {
         _logger.LogInformation("Health check requested");
-        
+
         return Ok(new
         {
             Status = "Healthy",
@@ -45,9 +45,9 @@ public class HealthController : ControllerBase
     [Authorize(Roles = "User")]
     public ActionResult<object> GetDetailedHealth()
     {
-        _logger.LogInformation("Detailed health check requested by user: {UserId}", 
+        _logger.LogInformation("Detailed health check requested by user: {UserId}",
             User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value);
-        
+
         return Ok(new
         {
             Status = "Healthy",
@@ -71,9 +71,9 @@ public class HealthController : ControllerBase
     [Authorize(Roles = "Admin")]
     public ActionResult<object> GetSystemInfo()
     {
-        _logger.LogInformation("System info requested by admin: {UserId}", 
+        _logger.LogInformation("System info requested by admin: {UserId}",
             User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value);
-        
+
         return Ok(new
         {
             Status = "Healthy",

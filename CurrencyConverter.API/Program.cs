@@ -1,16 +1,18 @@
-using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
-using Serilog;
 using Asp.Versioning;
-using CurrencyConverter.Infrastructure.Data;
-using CurrencyConverter.Domain.Entities;
-using CurrencyConverter.Application.Services;
-using CurrencyConverter.Domain.Interfaces;
-using FluentValidation.AspNetCore;
 using CurrencyConverter.API.Logging;
+using CurrencyConverter.Application.Services;
+using CurrencyConverter.Application.Settings;
+using CurrencyConverter.Domain.Entities;
+using CurrencyConverter.Infrastructure.Data;
+using FluentValidation.AspNetCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Serilog;
+using System.Text;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,8 +20,8 @@ var builder = WebApplication.CreateBuilder(args);
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
-    .Enrich.With<CurrencyConverter.API.Logging.ClientIpEnricher>()
-    .Enrich.With<CurrencyConverter.API.Logging.UserIdEnricher>()
+    .Enrich.With(new ClientIpEnricher(builder.Services.BuildServiceProvider().GetRequiredService<IHttpContextAccessor>()))
+    .Enrich.With(new UserIdEnricher(builder.Services.BuildServiceProvider().GetRequiredService<IHttpContextAccessor>()))
     .WriteTo.Console()
     .WriteTo.File("logs/currency-converter-.log", rollingInterval: RollingInterval.Day)
     .CreateLogger();
@@ -38,6 +40,10 @@ builder.Services.AddMemoryCache();
 
 // Register HttpContextAccessor for log enrichers
 builder.Services.AddSingleton<Microsoft.AspNetCore.Http.IHttpContextAccessor, Microsoft.AspNetCore.Http.HttpContextAccessor>();
+
+// Register custom Serilog enrichers
+builder.Services.AddSingleton<ClientIpEnricher>();
+builder.Services.AddSingleton<UserIdEnricher>();
 
 // Register Caching Service
 builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
@@ -108,7 +114,7 @@ builder.Services.AddAuthentication(options =>
         },
         OnTokenValidated = context =>
         {
-            Log.Information("JWT Token validated for user: {UserId}", 
+            Log.Information("JWT Token validated for user: {UserId}",
                 context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value);
             return Task.CompletedTask;
         }
@@ -135,8 +141,30 @@ builder.Services.AddApiVersioning(opt =>
     setup.SubstituteApiVersionInUrl = true;
 });
 
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddFixedWindowLimiter("fixed-window", opt =>
+    {
+        opt.PermitLimit = 100;
+        opt.Window = TimeSpan.FromSeconds(10);
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        opt.QueueLimit = 5;
+    });
+});
+
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
+// Configure CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSpecificOrigin",
+        builder => builder.WithOrigins("http://localhost:3000") // Replace with your frontend URL
+            .AllowAnyHeader()
+            .AllowAnyMethod());
+});
 
 var app = builder.Build();
 
@@ -155,9 +183,9 @@ using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
-    
+
     context.Database.EnsureCreated();
-    
+
     // Create default roles
     await SeedRolesAsync(roleManager);
 }
@@ -166,11 +194,22 @@ app.UseSerilogRequestLogging();
 
 app.UseHttpsRedirection();
 
+// Add Security Headers
+app.UseHsts();
+app.UseXContentTypeOptions();
+app.UseXfo(options => options.Deny()); // Deny framing to prevent clickjacking
+app.UseReferrerPolicy(options => options.NoReferrer()); // Control referrer information
+app.UseCsp(options => options.DefaultSources(s => s.Self()).FrameAncestors(s => s.None())); // Content Security Policy
+
 app.UseMiddleware<CurrencyConverter.API.Middleware.ExceptionHandlingMiddleware>();
+
+app.UseCors("AllowSpecificOrigin");
 
 // Authentication must come before Authorization
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseRateLimiter();
 
 app.MapControllers();
 
@@ -192,17 +231,17 @@ finally
 static async Task SeedRolesAsync(RoleManager<ApplicationRole> roleManager)
 {
     var roles = new[] { "User", "Admin" };
-    
+
     foreach (var roleName in roles)
     {
         if (!await roleManager.RoleExistsAsync(roleName))
         {
-            var role = new ApplicationRole 
-            { 
+            var role = new ApplicationRole
+            {
                 Name = roleName,
                 Description = roleName == "Admin" ? "Administrator with full access" : "Regular user with basic access"
             };
-            
+
             var result = await roleManager.CreateAsync(role);
             if (result.Succeeded)
             {
@@ -210,7 +249,7 @@ static async Task SeedRolesAsync(RoleManager<ApplicationRole> roleManager)
             }
             else
             {
-                Log.Error("Failed to create role {RoleName}: {Errors}", roleName, 
+                Log.Error("Failed to create role {RoleName}: {Errors}", roleName,
                     string.Join(", ", result.Errors.Select(e => e.Description)));
             }
         }
