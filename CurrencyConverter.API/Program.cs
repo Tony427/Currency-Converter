@@ -155,6 +155,15 @@ builder.Services.AddRateLimiter(options =>
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
+// Configure CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSpecificOrigin",
+        builder => builder.WithOrigins("http://localhost:3000") // Replace with your frontend URL
+            .AllowAnyHeader()
+            .AllowAnyMethod());
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -183,7 +192,16 @@ app.UseSerilogRequestLogging();
 
 app.UseHttpsRedirection();
 
+// Add Security Headers
+app.UseHsts();
+app.UseXContentTypeOptions();
+app.UseXfo(options => options.Deny()); // Deny framing to prevent clickjacking
+app.UseReferrerPolicy(options => options.NoReferrer()); // Control referrer information
+app.UseCsp(options => options.DefaultSources(s => s.Self()).FrameAncestors(s => s.None())); // Content Security Policy
+
 app.UseMiddleware<CurrencyConverter.API.Middleware.ExceptionHandlingMiddleware>();
+
+app.UseCors("AllowSpecificOrigin");
 
 // Authentication must come before Authorization
 app.UseAuthentication();
