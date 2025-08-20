@@ -256,13 +256,21 @@ builder.Services.AddOpenTelemetry()
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Docker"))
 {
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "Currency Converter API v1");
     });
+}
+
+app.UseSerilogRequestLogging();
+
+// Only use HTTPS redirection in non-Docker environments
+if (!app.Environment.IsEnvironment("Docker"))
+{
+    app.UseHttpsRedirection();
 }
 
 // Ensure database is created and seed initial data (skip if Testing environment)
@@ -281,16 +289,15 @@ if (!app.Environment.IsEnvironment("Testing"))
     }
 }
 
-app.UseSerilogRequestLogging();
-
-app.UseHttpsRedirection();
-
-// Add Security Headers
-app.UseHsts();
+// Add Security Headers (skip some for Docker to allow Swagger)
+if (!app.Environment.IsEnvironment("Docker"))
+{
+    app.UseHsts();
+    app.UseCsp(options => options.DefaultSources(s => s.Self()).FrameAncestors(s => s.None())); // Content Security Policy
+}
 app.UseXContentTypeOptions();
 app.UseXfo(options => options.Deny()); // Deny framing to prevent clickjacking
 app.UseReferrerPolicy(options => options.NoReferrer()); // Control referrer information
-app.UseCsp(options => options.DefaultSources(s => s.Self()).FrameAncestors(s => s.None())); // Content Security Policy
 
 app.UseMiddleware<CurrencyConverter.API.Middleware.ExceptionHandlingMiddleware>();
 
@@ -323,18 +330,24 @@ static async Task ApplyDatabaseMigrationsAsync(ApplicationDbContext context, IWe
 {
     try
     {
-        // In Docker/Production environments, ensure data directory exists
-        if (environment.IsProduction() || environment.IsEnvironment("Docker"))
+        // Ensure data directory exists for all environments
+        var connectionString = context.Database.GetConnectionString();
+        if (!string.IsNullOrEmpty(connectionString) && connectionString.StartsWith("Data Source="))
         {
-            var connectionString = context.Database.GetConnectionString();
-            if (!string.IsNullOrEmpty(connectionString) && connectionString.Contains("/app/data/"))
+            var dbPath = connectionString.Replace("Data Source=", "");
+            var dataDirectory = Path.GetDirectoryName(dbPath);
+            
+            // Convert relative path to absolute path if needed
+            if (!Path.IsPathRooted(dbPath))
             {
-                var dataDirectory = Path.GetDirectoryName(connectionString.Replace("Data Source=", ""));
-                if (!string.IsNullOrEmpty(dataDirectory) && !Directory.Exists(dataDirectory))
-                {
-                    Directory.CreateDirectory(dataDirectory);
-                    Log.Information("Created data directory: {DataDirectory}", dataDirectory);
-                }
+                var contentRoot = environment.ContentRootPath;
+                dataDirectory = Path.Combine(contentRoot, dataDirectory ?? "");
+            }
+            
+            if (!string.IsNullOrEmpty(dataDirectory) && !Directory.Exists(dataDirectory))
+            {
+                Directory.CreateDirectory(dataDirectory);
+                Log.Information("Created data directory: {DataDirectory}", dataDirectory);
             }
         }
 
