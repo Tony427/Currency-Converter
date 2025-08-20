@@ -19,8 +19,8 @@ namespace CurrencyConverter.API.Controllers
             _currencyService = currencyService;
         }
 
-        [HttpGet("latest")]
-        public async Task<IActionResult> GetLatestRates([FromQuery] string baseCurrency = "EUR")
+        [HttpGet("{baseCurrency}/latest")]
+        public async Task<IActionResult> GetLatestRates(string baseCurrency = "EUR")
         {
             var rates = await _currencyService.GetLatestExchangeRatesAsync(baseCurrency);
             if (rates == null || !rates.Any())
@@ -41,10 +41,10 @@ namespace CurrencyConverter.API.Controllers
             return Ok(result);
         }
 
-        [HttpGet("historical")]
-        public async Task<IActionResult> GetHistoricalRates([FromQuery] HistoricalRatesRequestDto request)
+        [HttpGet("{baseCurrency}/historical")]
+        public async Task<IActionResult> GetHistoricalRates(string baseCurrency, [FromQuery] DateTime fromDate, [FromQuery] DateTime toDate, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
-            var rates = await _currencyService.GetHistoricalExchangeRatesAsync(request.BaseCurrency, request.FromDate, request.ToDate, request.Page, request.PageSize);
+            var rates = await _currencyService.GetHistoricalExchangeRatesAsync(baseCurrency, fromDate, toDate, page, pageSize);
             if (rates == null || !rates.Any())
             {
                 return NotFound("No historical rates found for the specified criteria.");

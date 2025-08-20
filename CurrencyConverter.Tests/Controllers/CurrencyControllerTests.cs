@@ -98,7 +98,7 @@ namespace CurrencyConverter.Tests.Controllers
                 .ReturnsAsync(expectedRates);
 
             // Act
-            var result = await _controller.GetHistoricalRates(request);
+            var result = await _controller.GetHistoricalRates(request.BaseCurrency, request.FromDate, request.ToDate, request.Page, request.PageSize);
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result);
@@ -115,7 +115,7 @@ namespace CurrencyConverter.Tests.Controllers
                 .ReturnsAsync(new List<ExchangeRate>());
 
             // Act
-            var result = await _controller.GetHistoricalRates(request);
+            var result = await _controller.GetHistoricalRates(request.BaseCurrency, request.FromDate, request.ToDate, request.Page, request.PageSize);
 
             // Assert
             Assert.IsType<NotFoundObjectResult>(result);
