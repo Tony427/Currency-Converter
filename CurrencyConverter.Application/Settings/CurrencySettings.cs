@@ -3,5 +3,6 @@ namespace CurrencyConverter.Application.Settings
     public class CurrencySettings
     {
         public List<string> ExcludedCurrencies { get; set; }
+        public string Provider { get; set; } = "Frankfurter";
     }
 }
